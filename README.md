@@ -1,62 +1,133 @@
+<div align="center">
+
+<img src="frontend/public/favicon.svg" width="76" alt="OrbitSentinel logo" />
+
 # OrbitSentinel
 
-**Detection is solved, decisions aren't.** Free collision warnings exist, but satellite operators get raw
-numbers with no advice, and there is no rule for who moves when two active satellites are on a collision
-course. OrbitSentinel predicts close approaches from live orbital data, recommends an avoidance burn,
-negotiates who should move, and shows what a single breakup would do to the rest of orbit.
+### Detection is solved. Decisions aren't.
 
-![OrbitSentinel demo](frontend/docs/demo.gif)
+AI-assisted collision avoidance for satellite operators: live orbital data in, a clear decision out.
 
-## Features
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![three.js](https://img.shields.io/badge/three.js-000000?style=flat-square&logo=threedotjs&logoColor=white)
+![AWS Lambda](https://img.shields.io/badge/AWS_Lambda-FF9900?style=flat-square&logo=awslambda&logoColor=white)
+![Live data](https://img.shields.io/badge/data-Space--Track.org_live-4cc9f0?style=flat-square)
 
-- **Live catalog on a 3D globe**: every tracked on-orbit object (about 32,500) from Space-Track.org
-  general perturbations data in OMM format, propagated with SGP4 in the browser.
-- **Conjunction screening**: a 7-day SGP4 screen of the watch-list against the whole catalog, with miss
-  distance, relative speed, RTN offsets, uncertainty ellipse and a replay of the encounter.
-- **Collision probability**: worst-case (maximum) Pc over covariance scale, because public data has no
-  covariance (Alfano 2005, the same idea as CelesTrak SOCRATES' MAX_PROB).
-- **Avoidance options**: prograde and retrograde burns with delta-v, propellant (rocket equation), new
-  miss distance and new Pc, plus "No action"; a burn is recommended only above the NASA CARA red level.
-- **AI Negotiator**: when both objects can maneuver, one agent per operator and a mediator negotiate who
-  moves, scored on propellant reserve, maneuver cost, mission impact and delta-v, with adjustable weights.
-- **Sentinel brief and Ask Sentinel**: a plain-English risk summary and a chat that only answers from the
-  computed data; numbers are validated, with a deterministic fallback, so it never invents values.
-- **Rewind 2021**: real 2021 Starlink near-miss cases replayed to show how much faster and cheaper the
-  decision would have been.
-- **Cascade Lab**: fragments a chosen object and projects the extra conjunctions over the following years.
+<br />
+
+<img src="docs/media/mission-control.webp" width="100%" alt="Mission Control: about 32,500 tracked objects orbiting a 3D Earth, with the conjunction watch list and a highlighted close approach" />
+
+<sub><b>Mission Control</b> · every tracked object propagated with SGP4 on a live 3D globe (simulation at 600×)</sub>
+
+</div>
+
+---
+
+## The problem
+
+Space is getting crowded, and free collision warnings already exist. What operators get, though, is a
+raw number with no advice, and when two active satellites are on a collision course there is no
+shared way to agree **who should move**. OrbitSentinel turns a warning into a decision: how risky
+the encounter is, the cheapest burn that fixes it, and which operator should make it.
+
+<table>
+  <tr>
+    <td align="center"><b>~32,500</b><br /><sub>tracked objects, refreshed from Space-Track</sub></td>
+    <td align="center"><b>7 days</b><br /><sub>SGP4 screening window</sub></td>
+    <td align="center"><b>Seconds</b><br /><sub>from alert to an agreed plan</sub></td>
+    <td align="center"><b>0</b><br /><sub>invented numbers: every figure is computed</sub></td>
+  </tr>
+</table>
+
+## What it does
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/media/conjunctions.jpg" alt="Conjunction analysis screen" />
+      <h4>Conjunction analysis</h4>
+      Miss distance, relative speed, RTN offsets, a worst-case collision probability and a replay of
+      the encounter, with ranked prograde and retrograde burn options and their fuel cost.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/negotiator.jpg" alt="AI operator negotiation screen" />
+      <h4>AI Negotiator</h4>
+      One agent per operator and a mediator decide who moves, scored on propellant reserve, maneuver
+      cost, mission impact and delta-v. Every number in the transcript is checked against the physics.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/media/cascade-lab.jpg" alt="Cascade Lab breakup simulation" />
+      <h4>Cascade Lab</h4>
+      Break up any object and watch the fragment cloud spread, with the extra close approaches it
+      would create over the next 25 years.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/rewind-2021.jpg" alt="Rewind 2021 incident replay" />
+      <h4>Rewind 2021</h4>
+      Real 2021 near misses between the Chinese Space Station and Starlink, replayed to show the
+      agreement that never happened, reached in seconds.
+    </td>
+  </tr>
+</table>
+
+### Watch the negotiation
+
+<div align="center">
+<img src="docs/media/negotiation.webp" width="100%" alt="Operator agents negotiating who should move, round by round, ending in an agreed plan" />
+</div>
+
+### Also inside
+
+- **Sentinel brief**: a 3 to 5 sentence plain-English summary of the riskiest event and what to do.
+- **Ask Sentinel**: questions answered only from the computed data, with a deterministic fallback.
 - **Mobile alert view** for the on-call operator.
+- **Human in the loop**: nothing is ever sent to a spacecraft; an operator approves every maneuver.
 
-## Architecture
+## How it works
 
-| Layer | Stack |
+```mermaid
+flowchart LR
+    ST[(Space-Track.org<br/>GP / OMM)] --> D[Data<br/>catalog + cache]
+    D --> S[Screening<br/>SGP4, 7 days]
+    S --> P[Physics<br/>max Pc · burns · rocket eq.]
+    P --> A[AI<br/>brief · negotiator · ask]
+    S --> API{{FastAPI}}
+    P --> API
+    A --> API
+    API --> UI[React + three.js<br/>Mission Control]
+```
+
+| Step | What happens |
 | --- | --- |
-| Frontend | React, TypeScript, Vite, three.js, satellite.js |
-| API | Python 3.11+, FastAPI, Pydantic v2 (`backend/app/main.py`, `backend/app/routers/`) |
-| Data | Space-Track.org GP (or CelesTrak GP as a fallback), cached locally or in S3 (`backend/app/data/`) |
-| Physics | sgp4 + numpy screening, Pc, maneuver planning, cascade model (`backend/app/physics/`) |
-| AI | Grounded LLM text with a free-provider chain and cached fallback (`backend/app/ai/`) |
-| Deploy | AWS Lambda (Mangum) + API Gateway, S3, EventBridge |
+| **Data** | Pulls every on-orbit object from Space-Track.org in OMM format, at most once every 2 hours, and caches it locally or in S3. |
+| **Screening** | Propagates the watch-list against the whole catalog with SGP4 and finds every pass inside the screening distance. |
+| **Probability** | Public data has no covariance, so it reports the worst-case (maximum) Pc over covariance scale (Alfano 2005). |
+| **Maneuvers** | Plans prograde and retrograde burns, estimating fuel with the rocket equation; it recommends a burn only above the NASA CARA red level. |
+| **AI** | Writes the brief, runs the negotiation and answers questions, grounded in the computed facts; numbers are validated before display. |
 
-The frontend types in `frontend/src/api/types.ts` are the API contract; `backend/app/models.py` mirrors them.
+**Stack**: React · TypeScript · Vite · three.js · satellite.js · Python · FastAPI · Pydantic v2 · sgp4 ·
+numpy · AWS Lambda (Mangum) · API Gateway · S3 · EventBridge.
 
-## Run locally
+## Run it locally
 
-### Backend
+**Backend**
 
 ```sh
 cd backend
 python -m pip install -r requirements.txt
 cp .env.example .env        # add SPACETRACK_USERNAME and SPACETRACK_PASSWORD (free account)
-python -m app.data.refresh  # download the live catalog (at most once every 2 hours)
+python -m app.data.refresh  # download the live catalog
 python -m uvicorn app.main:app --port 8000
 ```
 
 The first screening runs in the background at startup and takes about a minute per watched object.
-Never commit `.env`; it is git-ignored.
 
-### Frontend
-
-Use Node.js 22.12 or later.
+**Frontend** (Node.js 22.12 or later)
 
 ```sh
 cd frontend
@@ -66,26 +137,25 @@ echo "VITE_API_BASE_URL=http://localhost:8000" >> .env.local
 npm run dev
 ```
 
-Without `.env.local` the frontend runs on built-in sample data and needs no backend.
+Skip `.env.local` to run the frontend on built-in sample data with no backend at all.
 
-### Tests
+**Tests**
 
 ```sh
 cd backend && python -m pytest -q
 cd frontend && npm run lint && npm test && npm run build
 ```
 
-## Limitations
+## Honest limits
 
-- Public GP data has no covariance, so Pc is a worst-case bound, not an operator-grade estimate.
+- Pc is a worst-case bound, because public orbital data carries no covariance.
 - "Maneuverable" means an active payload of a known propulsive fleet (Starlink, OneWeb, Kuiper, ISS,
-  Tianhe) or an ID listed in `CATALOG_MANEUVERABLE_IDS`; it is an assumption, not operator-verified.
+  Tianhe) or an ID in `CATALOG_MANEUVERABLE_IDS`; it is an assumption, not operator-verified.
 - Space-Track has no operational status, so other payloads are shown as status unknown.
-- The negotiation is a decision aid. No commands are sent to any spacecraft; a human operator approves
-  every maneuver.
+- OrbitSentinel is a decision aid: it never commands a spacecraft.
 
-More detail: [frontend guide](frontend/README.md), [engineering decisions](frontend/DECISIONS.md),
-[data pipeline](backend/app/data/README.md), [asset credits](frontend/ASSET_CREDITS.md).
+More: [frontend guide](frontend/README.md) · [engineering decisions](frontend/DECISIONS.md) ·
+[data pipeline](backend/app/data/README.md) · [asset credits](frontend/ASSET_CREDITS.md)
 
 ## Contributors
 
