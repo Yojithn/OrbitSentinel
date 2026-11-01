@@ -91,15 +91,13 @@ the encounter is, the cheapest burn that fixes it, and which operator should mak
 ## How it works
 
 ```mermaid
-flowchart LR
-    ST[(Space-Track.org<br/>GP / OMM)] --> D[Data<br/>catalog + cache]
-    D --> S[Screening<br/>SGP4, 7 days]
-    S --> P[Physics<br/>max Pc · burns · rocket eq.]
-    P --> A[AI<br/>brief · negotiator · ask]
-    S --> API{{FastAPI}}
-    P --> API
-    A --> API
-    API --> UI[React + three.js<br/>Mission Control]
+flowchart TB
+    ST[(Space-Track.org · GP / OMM)] --> D[Data · catalog + cache]
+    D --> S[Screening · SGP4 over 7 days]
+    S --> P[Physics · max Pc · burns · rocket equation]
+    P --> A[AI · brief · negotiator · Ask Sentinel]
+    S & P & A --> API{{FastAPI}}
+    API --> UI[React + three.js · Mission Control]
 ```
 
 | Step | What happens |
